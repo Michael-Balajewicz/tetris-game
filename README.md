@@ -57,3 +57,33 @@ data/          level-0 block sequences
 Each module is a pair: `foo.cc` declares the interface (`export module Foo;`),
 `foo-impl.cc` implements it. Module names are independent of file paths, so
 moving a file never breaks an `import`.
+
+## Design patterns
+
+**Observer** — `src/core/abstract.cc` defines `Subject` and `Observer`. Each
+`Board` *is a* `Subject`; the single `TextDisplay` *is an* `Observer` watching
+both boards. `Board` calls `notify()` whenever it places a block or clears
+lines, and `Game` wires the two together with `p1.getBoard().attach(&td)`. The
+boards never know a display exists — swapping in a graphical view would touch
+no board code.
+
+**Strategy** — `Level` is an abstract base whose `createBlock()` defines *how*
+the next block is chosen. `Level0` replays a scripted sequence from a file;
+`Level1`–`Level3` use progressively harsher random distributions. `Player`
+holds a `unique_ptr<Level>` and **swaps it at runtime** in `levelUp()` /
+`levelDown()`, so difficulty changes mid-game without any other Player code
+changing.
+
+**Factory Method** — `Level::createBlock()` is the factory method itself: the
+base class declares it, and each concrete level decides which `Block` to
+return.
+
+**Factory functions** — `makeBlock()` maps a `BlockType` to its four cell
+offsets; `makeLevel()` / `makeLevel0()` construct levels. `Level0`–`Level3`
+are deliberately *not* exported from the `Level` module, so these functions are
+the only way to build one — the module boundary enforces the encapsulation that
+a header-based design would need a separate `.h`/`.cc` split to achieve.
+
+Note that `CommandInterpreter` is a *parser*, not the Command pattern: it turns
+a line of input into a `CommandType` enum plus a repeat count, which
+`Game::run()` dispatches through an if/else chain.
