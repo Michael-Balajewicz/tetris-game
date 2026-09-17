@@ -1,0 +1,7 @@
+# Build output
+build/
+biquadris
+*.o
+
+# GCC C++20 module cache
+gcm.cache/

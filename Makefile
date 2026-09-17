@@ -3,18 +3,27 @@ CXXFLAGS = -std=c++20 -fmodules-ts -Wall -Wextra -g
 
 TARGET = biquadris
 
+# Source tree layout
+CORE = src/core
+GAME = src/game
+UI   = src/ui
+BLD  = build
+
+# Object files live in build/ so the source tree stays clean.
+$(shell mkdir -p $(BLD))
+
 OBJS = \
-        types.o types-impl.o \
-        abstract.o abstract-impl.o \
-        block.o block-impl.o \
-        board.o board-impl.o \
-        level.o level-impl.o \
-        score.o score-impl.o \
-        player.o player-impl.o \
-        textdisplay.o textdisplay-impl.o \
-        commandInterpreter.o commandInterpreter-impl.o \
-        game.o game-impl.o \
-        main.o
+        $(BLD)/types.o $(BLD)/types-impl.o \
+        $(BLD)/abstract.o $(BLD)/abstract-impl.o \
+        $(BLD)/block.o $(BLD)/block-impl.o \
+        $(BLD)/board.o $(BLD)/board-impl.o \
+        $(BLD)/level.o $(BLD)/level-impl.o \
+        $(BLD)/score.o $(BLD)/score-impl.o \
+        $(BLD)/player.o $(BLD)/player-impl.o \
+        $(BLD)/textdisplay.o $(BLD)/textdisplay-impl.o \
+        $(BLD)/commandInterpreter.o $(BLD)/commandInterpreter-impl.o \
+        $(BLD)/game.o $(BLD)/game-impl.o \
+        $(BLD)/main.o
 
 all: sysheaders $(TARGET)
 
@@ -31,84 +40,91 @@ sysheaders:
 	$(CXX) $(CXXFLAGS) -c -x c++-system-header string
 
 # ------------- MODULES -------------
+# Order matters: a module interface must be compiled before anything
+# that imports it, so each rule lists the .o files it imports from.
 
-types.o: types.cc
-	$(CXX) $(CXXFLAGS) -c types.cc
+# --- core ---
+$(BLD)/types.o: $(CORE)/types.cc
+	$(CXX) $(CXXFLAGS) -c $(CORE)/types.cc -o $@
 
-types-impl.o: types-impl.cc types.o
-	$(CXX) $(CXXFLAGS) -c types-impl.cc
-
-
-abstract.o: abstract.cc
-	$(CXX) $(CXXFLAGS) -c abstract.cc
-
-abstract-impl.o: abstract-impl.cc abstract.o
-	$(CXX) $(CXXFLAGS) -c abstract-impl.cc
+$(BLD)/types-impl.o: $(CORE)/types-impl.cc $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(CORE)/types-impl.cc -o $@
 
 
-block.o: block.cc types.o
-	$(CXX) $(CXXFLAGS) -c block.cc
+$(BLD)/abstract.o: $(CORE)/abstract.cc
+	$(CXX) $(CXXFLAGS) -c $(CORE)/abstract.cc -o $@
 
-block-impl.o: block-impl.cc block.o types.o
-	$(CXX) $(CXXFLAGS) -c block-impl.cc
-
-
-board.o: board.cc block.o abstract.o
-	$(CXX) $(CXXFLAGS) -c board.cc
-
-board-impl.o: board-impl.cc board.o
-	$(CXX) $(CXXFLAGS) -c board-impl.cc
+$(BLD)/abstract-impl.o: $(CORE)/abstract-impl.cc $(BLD)/abstract.o
+	$(CXX) $(CXXFLAGS) -c $(CORE)/abstract-impl.cc -o $@
 
 
-level.o: level.cc block.o types.o
-	$(CXX) $(CXXFLAGS) -c level.cc
+# --- game ---
+$(BLD)/block.o: $(GAME)/block.cc $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/block.cc -o $@
 
-level-impl.o: level-impl.cc level.o block.o types.o
-	$(CXX) $(CXXFLAGS) -c level-impl.cc
-
-
-score.o: score.cc
-	$(CXX) $(CXXFLAGS) -c score.cc
-
-score-impl.o: score-impl.cc score.o
-	$(CXX) $(CXXFLAGS) -c score-impl.cc
+$(BLD)/block-impl.o: $(GAME)/block-impl.cc $(BLD)/block.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/block-impl.cc -o $@
 
 
-player.o: player.cc board.o level.o score.o block.o types.o
-	$(CXX) $(CXXFLAGS) -c player.cc
+$(BLD)/board.o: $(GAME)/board.cc $(BLD)/block.o $(BLD)/abstract.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/board.cc -o $@
 
-player-impl.o: player-impl.cc player.o board.o level.o score.o block.o types.o
-	$(CXX) $(CXXFLAGS) -c player-impl.cc
-
-
-textdisplay.o: textdisplay.cc player.o board.o abstract.o
-	$(CXX) $(CXXFLAGS) -c textdisplay.cc
-
-textdisplay-impl.o: textdisplay-impl.cc textdisplay.o player.o board.o abstract.o
-	$(CXX) $(CXXFLAGS) -c textdisplay-impl.cc
+$(BLD)/board-impl.o: $(GAME)/board-impl.cc $(BLD)/board.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/board-impl.cc -o $@
 
 
-commandInterpreter.o: commandInterpreter.cc types.o
-	$(CXX) $(CXXFLAGS) -c commandInterpreter.cc
+$(BLD)/level.o: $(GAME)/level.cc $(BLD)/block.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/level.cc -o $@
 
-commandInterpreter-impl.o: commandInterpreter-impl.cc commandInterpreter.o
-	$(CXX) $(CXXFLAGS) -c commandInterpreter-impl.cc
-
-
-game.o: game.cc player.o textdisplay.o commandInterpreter.o
-	$(CXX) $(CXXFLAGS) -c game.cc
-
-game-impl.o: game-impl.cc game.o types.o
-	$(CXX) $(CXXFLAGS) -c game-impl.cc
+$(BLD)/level-impl.o: $(GAME)/level-impl.cc $(BLD)/level.o $(BLD)/block.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/level-impl.cc -o $@
 
 
-main.o: main.cc game.o
-	$(CXX) $(CXXFLAGS) -c main.cc
+$(BLD)/score.o: $(GAME)/score.cc
+	$(CXX) $(CXXFLAGS) -c $(GAME)/score.cc -o $@
+
+$(BLD)/score-impl.o: $(GAME)/score-impl.cc $(BLD)/score.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/score-impl.cc -o $@
+
+
+$(BLD)/player.o: $(GAME)/player.cc $(BLD)/board.o $(BLD)/level.o $(BLD)/score.o $(BLD)/block.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/player.cc -o $@
+
+$(BLD)/player-impl.o: $(GAME)/player-impl.cc $(BLD)/player.o $(BLD)/board.o $(BLD)/level.o $(BLD)/score.o $(BLD)/block.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/player-impl.cc -o $@
+
+
+# --- ui ---
+$(BLD)/textdisplay.o: $(UI)/textdisplay.cc $(BLD)/player.o $(BLD)/board.o $(BLD)/abstract.o
+	$(CXX) $(CXXFLAGS) -c $(UI)/textdisplay.cc -o $@
+
+$(BLD)/textdisplay-impl.o: $(UI)/textdisplay-impl.cc $(BLD)/textdisplay.o $(BLD)/player.o $(BLD)/board.o $(BLD)/abstract.o
+	$(CXX) $(CXXFLAGS) -c $(UI)/textdisplay-impl.cc -o $@
+
+
+$(BLD)/commandInterpreter.o: $(UI)/commandInterpreter.cc $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(UI)/commandInterpreter.cc -o $@
+
+$(BLD)/commandInterpreter-impl.o: $(UI)/commandInterpreter-impl.cc $(BLD)/commandInterpreter.o
+	$(CXX) $(CXXFLAGS) -c $(UI)/commandInterpreter-impl.cc -o $@
+
+
+# --- top level ---
+$(BLD)/game.o: $(GAME)/game.cc $(BLD)/player.o $(BLD)/textdisplay.o $(BLD)/commandInterpreter.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/game.cc -o $@
+
+$(BLD)/game-impl.o: $(GAME)/game-impl.cc $(BLD)/game.o $(BLD)/types.o
+	$(CXX) $(CXXFLAGS) -c $(GAME)/game-impl.cc -o $@
+
+
+$(BLD)/main.o: src/main.cc $(BLD)/game.o
+	$(CXX) $(CXXFLAGS) -c src/main.cc -o $@
 
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(TARGET)
 
 clean:
-	rm -f *.o $(TARGET)
-	rm -rf gcm.cache
+	rm -rf $(BLD) $(TARGET) gcm.cache
+
+.PHONY: all sysheaders clean
